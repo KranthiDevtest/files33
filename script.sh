@@ -3,8 +3,7 @@
 # github.sh
 # - create a new repository in Github
 
-username=KranthiDevtest
-repo_name=testrepo
+
 
 # get user name
 username=`git config github.user`
