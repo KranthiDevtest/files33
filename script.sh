@@ -1,53 +1,60 @@
 #!/bin/sh
 # 
-# github.sh
-# - create a new repository in Github
+#
+username=KranthiDevtest
+repo_name=Sites3
 
-
-
-# get user name
-username=`git config github.user`
-if [ "$username" = "" ]; then
-    echo "Could not find username, run 'git config --global github.user <username>'"
-    invalid_credentials=1
+if [ "$username" = "-h" ]; then
+echo "USAGE:"
+echo "1 argument - your username in gitlab"
+echo "2 argument - name of the repo you want to create"
+exit 1
 fi
 
-# get repo name
+if [ "$username" = "" ]; then
+echo "Could not find username, please provide it."
+exit 1
+fi
+
 dir_name=`basename $(pwd)`
-read -p "Do you want to use '$dir_name' as a repo name?(y/n)" answer_dirname
-case $answer_dirname in
-  y)
-    # use currently dir name as a repo name
-    reponame=$dir_name
-    ;;
-  n)
-    read -p "Enter your new repository name: " reponame
-    if [ "$reponame" = "" ]; then
-        reponame=$dir_name
-    fi
-    ;;
-  *)
-    ;;
-esac
 
+if [ "$repo_name" = "" ]; then
+read -p "Repo name (hit enter to use '$dir_name')? " repo_name
+fi
 
-# create repo
-echo "Creating Github repository '$reponame' ..."
-curl -u $username https://api.github.com/user/repos -d '{"name":"'$reponame'"}'
+if [ "$repo_name" = "" ]; then
+repo_name=$dir_name
+fi
+
+# ask user for password
+read -s -p "Enter Password: " password
+
+request=`curl --request POST "https://api.github.com/session?login=$username&password=$password"`
+
+if [ "$request" = '{"message":"401 Unauthorized"}' ]; then
+echo "Username or password incorrect."
+exit 1
+fi
+
+token=`echo $request | cut -d , -f 28 | cut -d : -f 2 | cut -d '"' -f 2`
+
+echo -n "Creating GitLab repository '$repo_name' ..."
+curl -H "$username"https://api.github.com/user/repos -d '{"name":"'$repo_name'"}' > /dev/null 2>&1
 echo " done."
 
-# create empty README.md
-echo "Creating README ..."
-touch README.md
-echo " done."
+# 2>$1 means that we want redirect stderr to stdout
 
-# push to remote repo
-echo "Pushing to remote ..."
+echo -n "Pushing local code to remote ..."
 git init
-git add -A
+echo "gitlab-init-remote.sh" > .gitignore
+echo ".gitignore" >> .gitignore
+git config --global core.excudefiles ~/.gitignore_global
+git config --global user.name=$username
+git add .
 git commit -m "first commit"
-git remote rm origin
-git remote add origin https://github.com/$username/$reponame.git
-git push -u origin master
+git remote add origin https://api.github.com/$username/$repo_name.git > /dev/null 2>&1
+git push -u origin master > /dev/null 2>&1
 echo " done."
+
+
 
